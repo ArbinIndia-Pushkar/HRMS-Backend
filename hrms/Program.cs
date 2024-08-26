@@ -1,11 +1,23 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using hrms.Data;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+
 // Add services to the container.
 builder.Services.AddControllers();
+
+var Configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json")
+                .Build();
+
+builder.Services.AddSingleton(Configuration);
+
+// Configure PostgreSQL database
+builder.Services.AddDbContext<hrmsDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("hrmsDb")));
 
 // Add Swagger services
 builder.Services.AddEndpointsApiExplorer();
