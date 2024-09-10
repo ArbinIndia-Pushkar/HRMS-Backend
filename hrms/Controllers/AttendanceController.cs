@@ -1,11 +1,14 @@
 ﻿using hrms.Data;
+using hrms.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using System.Text.Json;
 
 namespace hrms.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AttendanceController : ControllerBase
+    public class AttendanceController : Controller
     {
         private readonly hrmsDbContext _context;
 
@@ -14,50 +17,69 @@ namespace hrms.Controllers
             _context = context;
         }
 
-
-        [HttpPost("{employeeId}/attendance")]
-        public async Task<IActionResult> UpdateAttendance(string employeeId, [FromBody] Dictionary<string, bool> attendanceRecords)
+        [HttpGet("{employeeId}/attendance")]
+        public async Task<IActionResult> GetAttendanceRecords(string employeeId)
         {
-            try
-            {
-                var employee = await _context.Employees.FindAsync(employeeId);
-                if (employee == null)
-                {
-                    return NotFound($"Employee with ID {employeeId} not found.");
-                }
+            var employee = await _context.Employees.FindAsync(employeeId);
 
-                employee.AttendanceRecords = attendanceRecords;
-                await _context.SaveChangesAsync();
-
-                return NoContent(); // 204 No Content
-            }
-            catch (Exception ex)
+            if (employee == null)
             {
-                // Log the exception
-                Console.WriteLine(ex.Message);
-                return StatusCode(500, "Internal server error");
+                return NotFound();
             }
+
+            var records = DeserializeAttendanceRecords(employee.AttendanceRecords);
+            return Ok(records);
         }
 
-        [HttpGet("{employeeId}/attendance")]
-        public async Task<IActionResult> GetAttendance(string employeeId)
+        [HttpPost("{employeeId}")]
+        public async Task<IActionResult> UpdateAttendanceRecords(string employeeId, [FromBody] Dictionary<string, bool> newAttendanceRecords)
         {
-            try
-            {
-                var employee = await _context.Employees.FindAsync(employeeId);
-                if (employee == null)
-                {
-                    return NotFound($"Employee with ID {employeeId} not found.");
-                }
+            var employee = await _context.Employees.FindAsync(employeeId);
 
-                return Ok(employee.AttendanceRecords);
-            }
-            catch (Exception ex)
+            if (employee == null)
             {
-                // Log the exception
-                Console.WriteLine(ex.Message);
-                return StatusCode(500, "Internal server error");
+                return NotFound();
             }
+
+            var existingRecords = DeserializeAttendanceRecords(employee.AttendanceRecords);
+
+            foreach (var record in newAttendanceRecords)
+            {
+                existingRecords[record.Key] = record.Value; // Update or add new records
+            }
+
+            employee.AttendanceRecords = SerializeAttendanceRecords(existingRecords);
+
+            _context.Employees.Update(employee);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private static string SerializeAttendanceRecords(Dictionary<string, bool> attendanceRecords)
+        {
+            var dates = attendanceRecords
+                .Where(record => record.Value) // Only include attended dates
+                .Select(record => record.Key);
+
+            return string.Join(",", dates);
+        }
+
+        private static Dictionary<string, bool> DeserializeAttendanceRecords(string attendanceRecords)
+        {
+            var records = new Dictionary<string, bool>();
+
+            if (!string.IsNullOrEmpty(attendanceRecords))
+            {
+                var dates = attendanceRecords.Split(',');
+                foreach (var date in dates)
+                {
+                    records[date] = true; // Mark as attended
+                }
+            }
+
+            return records;
+
         }
     }
 }

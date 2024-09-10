@@ -16,17 +16,7 @@ namespace hrms.Models
         public int personalLeaves { get; set; }
         public int sickLeaves { get; set;  }
         public int compOffs { get; set; }
+        public string AttendanceRecords { get; set; }
 
-        // Use string for date keys
-        public string AttendanceRecordsJson { get; set; }
-
-        [NotMapped]
-        public Dictionary<string, bool> AttendanceRecords
-        {
-            get => string.IsNullOrEmpty(AttendanceRecordsJson)
-                ? new Dictionary<string, bool>()
-                : JsonSerializer.Deserialize<Dictionary<string, bool>>(AttendanceRecordsJson);
-            set => AttendanceRecordsJson = JsonSerializer.Serialize(value);
-        }
     }
 }

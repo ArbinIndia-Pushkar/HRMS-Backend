@@ -10,13 +10,5 @@ namespace hrms.Data
         }
 
         public DbSet<Employees> Employees { get; set; }
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
-
-            // Ignore AttendanceRecords property
-            modelBuilder.Entity<Employees>()
-                .Ignore(e => e.AttendanceRecords);
-        }
     }
 }
